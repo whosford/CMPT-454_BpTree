@@ -170,8 +170,7 @@ public class BpTree {
 		System.out.print(" [");
 		for (i = 0; i < ((BLeafNode) node).getKeyCount() - 1; i++)
 			System.out.print(((BLeafNode) node).getValue(i) + ",");
-		System.out.print(((BLeafNode) node).getValue(i));
-		System.out.print("]");
+		System.out.print(((BLeafNode) node).getValue(i) + "]");
 	}
 	
 	abstract class BNode {
