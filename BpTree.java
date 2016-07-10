@@ -65,31 +65,25 @@ public class BpTree {
 		if (root.keyCount == 0)
 			return;
 		
-		if (root.getNodeType() == "LeafNode") {
-			printKeys(root);
-			System.out.println();
-		}
-		else {
-			Queue<BNode> q = new LinkedList<BNode>();
-	 		int nodesRemaining = 0; 
-	 		q.add(root);
-	 		while (!q.isEmpty()) {
-	 			nodesRemaining = q.size();
-	 			while (nodesRemaining > 0) {
-					BNode n = (BNode) q.remove();
-					printKeys(n);
-					if (n.getNodeType() == "InnerNode") {
-						for (int i = 0; i <= ((BInnerNode) n).getKeyCount(); ++i) {
-							if (((BInnerNode) n).getChild(i) != null)
-								q.add(((BInnerNode) n).getChild(i));
-							else
-								break;
-						}
+		Queue<BNode> q = new LinkedList<BNode>();
+		int nodesRemaining = 0;
+		q.add(root);
+		while (!q.isEmpty()) {
+			nodesRemaining = q.size();
+			while (nodesRemaining > 0) {
+				BNode n = (BNode) q.remove();
+				printKeys(n);
+				if (n.getNodeType() == "InnerNode") {
+					for (int i = 0; i <= ((BInnerNode) n).getKeyCount(); ++i) {
+						if (((BInnerNode) n).getChild(i) != null)
+							q.add(((BInnerNode) n).getChild(i));
+						else
+							break;
 					}
-					--nodesRemaining;
 				}
-				System.out.println();
-	 		}
+				--nodesRemaining;
+			}
+			System.out.println();
 		}
 	}
 	
@@ -97,33 +91,27 @@ public class BpTree {
 		if (root.getKeyCount() == 0)
 			return;
 		
-		if (root.getNodeType() == "LeafNode") {
-			printValues(root);
-			System.out.println();
-		}
-		else {
-			Queue<BNode> q = new LinkedList<BNode>();
-	 		int nodesRemaining = 0; 
-	 		q.add(root);
-	 		while (!q.isEmpty()) {
-	 			nodesRemaining = q.size();
-	 			while (nodesRemaining > 0) {
-					BNode n = (BNode) q.remove();
-					if (n.getNodeType() == "LeafNode")
-						printValues((BLeafNode) n);
-					else {
-						for (int i = 0; i <= ((BInnerNode) n).getKeyCount(); ++i) {
-							if (((BInnerNode) n).getChild(i) != null)
-								q.add(((BInnerNode) n).getChild(i));
-							else
-								break;
-						}
+		Queue<BNode> q = new LinkedList<BNode>();
+		int nodesRemaining = 0;
+		q.add(root);
+		while (!q.isEmpty()) {
+			nodesRemaining = q.size();
+			while (nodesRemaining > 0) {
+				BNode n = (BNode) q.remove();
+				if (n.getNodeType() == "LeafNode")
+					printValues((BLeafNode) n);
+				else {
+					for (int i = 0; i <= ((BInnerNode) n).getKeyCount(); ++i) {
+						if (((BInnerNode) n).getChild(i) != null)
+							q.add(((BInnerNode) n).getChild(i));
+						else
+							break;
 					}
-					--nodesRemaining;
 				}
-	 		}
-	 		System.out.println();
-		}	
+				--nodesRemaining;
+			}
+		}
+		System.out.println();
 	}
 	
 	private BNode root; //Pointer to root
@@ -145,29 +133,27 @@ public class BpTree {
 	private void copyTree(BNode node) {
 		if (node.getKeyCount() == 0)
 			return;
-		else {
-			Queue<BNode> q = new LinkedList<BNode>();
-	 		int nodesRemaining = 0; 
-	 		q.add(node);
-	 		while (!q.isEmpty()) {
-	 			nodesRemaining = q.size();
-	 			while (nodesRemaining > 0) {
-					BNode n = (BNode) q.remove();
-					if (n.getNodeType() == "LeafNode"){
-						for (int i = 0; i < ((BLeafNode) n).getKeyCount(); ++i)
-							insert(((BLeafNode) n).getKey(i), ((BLeafNode) n).getValue(i));
-					}	
-					else {
-						for (int i = 0; i <= ((BInnerNode) n).getKeyCount(); ++i) {
-							if (((BInnerNode) n).getChild(i) != null)
-								q.add(((BInnerNode) n).getChild(i));
-							else
-								break;
-						}
+		
+		Queue<BNode> q = new LinkedList<BNode>();
+		int nodesRemaining = 0;
+		q.add(node);
+		while (!q.isEmpty()) {
+			nodesRemaining = q.size();
+			while (nodesRemaining > 0) {
+				BNode n = (BNode) q.remove();
+				if (n.getNodeType() == "LeafNode") {
+					for (int i = 0; i < ((BLeafNode) n).getKeyCount(); ++i)
+						insert(((BLeafNode) n).getKey(i), ((BLeafNode) n).getValue(i));
+				} else {
+					for (int i = 0; i <= ((BInnerNode) n).getKeyCount(); ++i) {
+						if (((BInnerNode) n).getChild(i) != null)
+							q.add(((BInnerNode) n).getChild(i));
+						else
+							break;
 					}
-					--nodesRemaining;
 				}
-	 		}
+				--nodesRemaining;
+			}
 		}
 	}
 	
