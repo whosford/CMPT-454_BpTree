@@ -118,15 +118,13 @@ public class BpTree {
 	 			while (nodesRemaining > 0) {
 					BNode n = (BNode) q.remove();
 					if (n.getNodeType() == "LeafNode"){
-						BLeafNode tmp = (BLeafNode) n;
-						for (int i = 0; i < tmp.getKeyCount(); ++i)
-							insert(tmp.getKey(i), tmp.getValue(i));
+						for (int i = 0; i < ((BLeafNode) n).getKeyCount(); ++i)
+							insert(((BLeafNode) n).getKey(i), ((BLeafNode) n).getValue(i));
 					}	
 					else {
-						BInnerNode tmp = (BInnerNode) n;
-						for (int i = 0; i <= tmp.getKeyCount(); ++i) {
-							if (tmp.getChild(i) != null)
-								q.add(tmp.getChild(i));
+						for (int i = 0; i <= ((BInnerNode) n).getKeyCount(); ++i) {
+							if (((BInnerNode) n).getChild(i) != null)
+								q.add(((BInnerNode) n).getChild(i));
 							else
 								break;
 						}
@@ -683,10 +681,9 @@ public class BpTree {
 					BNode n = (BNode) q.remove();
 					n.printNode();
 					if (n.getNodeType() == "InnerNode") {
-						BInnerNode tmp = (BInnerNode) n;
-						for (int i = 0; i <= tmp.getKeyCount(); ++i) {
-							if (tmp.getChild(i) != null)
-								q.add(tmp.getChild(i));
+						for (int i = 0; i <= ((BInnerNode) n).getKeyCount(); ++i) {
+							if (((BInnerNode) n).getChild(i) != null)
+								q.add(((BInnerNode) n).getChild(i));
 							else
 								break;
 						}
@@ -706,12 +703,11 @@ public class BpTree {
 	 			while (nodesRemaining > 0) {
 					BNode n = (BNode) q.remove();
 					if (n.getNodeType() == "LeafNode")
-						n.printV(n);
+						((BLeafNode) n).printV(n);
 					else {
-						BInnerNode tmp = (BInnerNode) n;
-						for (int i = 0; i <= tmp.getKeyCount(); ++i) {
-							if (tmp.getChild(i) != null)
-								q.add(tmp.getChild(i));
+						for (int i = 0; i <= ((BInnerNode) n).getKeyCount(); ++i) {
+							if (((BInnerNode) n).getChild(i) != null)
+								q.add(((BInnerNode) n).getChild(i));
 							else
 								break;
 						}
