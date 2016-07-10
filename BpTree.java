@@ -2,9 +2,6 @@ import java.util.LinkedList;
 import java.util.Queue;
 
 public class BpTree {
-	private BNode root; //Pointer to root
-	private final int N; //Maximum number of keys in interior and leaf nodes
-	
 	//Default constructor
 	public BpTree() {
 		N = 4;
@@ -25,9 +22,8 @@ public class BpTree {
 		copyTree(B.getRoot());
 	}
 	
-	/*
-	 * Insert a new key and its associated value into tree
-	*/
+
+	//Insert a new key and its associated value into tree
 	public void insert(int key, String value) {
 		if (this.find(key) != null) 
 			System.out.println("Error: Key (" + key + ") already in tree, not inserted.");
@@ -45,9 +41,7 @@ public class BpTree {
 		}
 	}
 	
-	/*
-	 * Search for a key and return its value or null if key is not in tree
-	*/
+	//Search for a key and return its value or null if key is not in tree
 	public String find(int key) {
 		BLeafNode leaf = this.findCorrectLeaf(key);
 		
@@ -55,9 +49,8 @@ public class BpTree {
 		return (index == -1) ? null : leaf.getValue(index);
 	}
 	
-	/*
-	 * Delete a key and its associated value from the tree.
-	*/
+
+	//Delete a key and its associated value from the tree
 	public void remove(int key) {
 		BLeafNode leaf = this.findCorrectLeaf(key);
 		
@@ -69,31 +62,74 @@ public class BpTree {
 	}
 	
 	public void printKeys() {
-		if (root == null)
+		if (root.keyCount == 0)
 			return;
 		
 		if (root.getNodeType() == "LeafNode") {
-			root.printNode();
+			printKeys(root);
 			System.out.println();
 		}
-		else
-			root.printK(root);
+		else {
+			Queue<BNode> q = new LinkedList<BNode>();
+	 		int nodesRemaining = 0; 
+	 		q.add(root);
+	 		while (!q.isEmpty()) {
+	 			nodesRemaining = q.size();
+	 			while (nodesRemaining > 0) {
+					BNode n = (BNode) q.remove();
+					printKeys(n);
+					if (n.getNodeType() == "InnerNode") {
+						for (int i = 0; i <= ((BInnerNode) n).getKeyCount(); ++i) {
+							if (((BInnerNode) n).getChild(i) != null)
+								q.add(((BInnerNode) n).getChild(i));
+							else
+								break;
+						}
+					}
+					--nodesRemaining;
+				}
+				System.out.println();
+	 		}
+		}
 	}
 	
 	public void printValues() {
-		if (root == null)
+		if (root.getKeyCount() == 0)
 			return;
 		
 		if (root.getNodeType() == "LeafNode") {
-			root.printV(root);
+			printValues(root);
 			System.out.println();
 		}
-		else
-			root.printV(root);
+		else {
+			Queue<BNode> q = new LinkedList<BNode>();
+	 		int nodesRemaining = 0; 
+	 		q.add(root);
+	 		while (!q.isEmpty()) {
+	 			nodesRemaining = q.size();
+	 			while (nodesRemaining > 0) {
+					BNode n = (BNode) q.remove();
+					if (n.getNodeType() == "LeafNode")
+						printValues((BLeafNode) n);
+					else {
+						for (int i = 0; i <= ((BInnerNode) n).getKeyCount(); ++i) {
+							if (((BInnerNode) n).getChild(i) != null)
+								q.add(((BInnerNode) n).getChild(i));
+							else
+								break;
+						}
+					}
+					--nodesRemaining;
+				}
+	 		}
+	 		System.out.println();
+		}	
 	}
 	
+	private BNode root; //Pointer to root
+	private final int N; //Maximum number of keys in interior and leaf nodes
 	
-	public BLeafNode findCorrectLeaf(int key) {
+	private BLeafNode findCorrectLeaf(int key) {
 		BNode node = this.root;
 		while (node.getNodeType() == "InnerNode") {
 			node = ((BInnerNode) node).getChild(node.find(key));
@@ -133,6 +169,23 @@ public class BpTree {
 				}
 	 		}
 		}
+	}
+	
+	private void printKeys(BNode node) {
+		int i;
+		System.out.print(" [");
+		for (i = 0; i < node.getKeyCount() - 1; ++i)
+			System.out.print(node.getKey(i) + ",");
+		System.out.print(node.getKey(i) + "]");
+	}
+	
+	private void printValues(BNode node) {
+		int i;
+		System.out.print(" [");
+		for (i = 0; i < ((BLeafNode) node).getKeyCount() - 1; i++)
+			System.out.print(((BLeafNode) node).getValue(i) + ",");
+		System.out.print(((BLeafNode) node).getValue(i));
+		System.out.print("]");
 	}
 	
 	abstract class BNode {
@@ -285,23 +338,12 @@ public class BpTree {
 		protected abstract void Merge(int sinkKey, BNode rightSibling);
 		protected abstract int giveKey(int sinkKey, BNode sibling, int borrowIndex);
 		//End deletion helper functions
-		
-		public void printNode() {
-			int i;
-			System.out.print(" [");
-			for (i = 0; i < this.getKeyCount() - 1; ++i)
-				System.out.print(this.getKey(i) + ",");
-			System.out.print(this.getKey(i) + "]");
-		}
-		
-		protected abstract void printK(BNode node);
-		protected abstract void printV(BNode node);
 	}
 	
 	class BLeafNode extends BNode {
 		private String[] values;
 		
-		public BLeafNode() {
+		protected BLeafNode() {
 			this.keys = new int[N];
 			this.values = new String[N];
 			this.nodeType = "LeafNode";
@@ -452,26 +494,12 @@ public class BpTree {
 			return Index == 0 ? sibling.getKey(0) : this.getKey(0);
 		}
 		//End deletion operations
-		
-		protected void printK(BNode node) {
-			node.printNode();
-		}
-		
-		protected void printV(BNode node) {
-			BLeafNode leaf = (BLeafNode) node;
-			int i;
-			System.out.print(" [");
-			for (i = 0; i < leaf.getKeyCount() - 1; i++)
-				System.out.print(leaf.getValue(i) + ",");
-			System.out.print(leaf.getValue(i));
-			System.out.print("]");
-		}
 	}
 	
 	class BInnerNode extends BNode {
 		protected BNode[] children; 
 		
-		public BInnerNode() {
+		protected BInnerNode() {
 			this.keys = new int[N];
 			this.children = new BNode[N + 1];
 			this.nodeType = "InnerNode";
@@ -670,52 +698,5 @@ public class BpTree {
 			return KeyUp;
 		}
 		//End deletion operations	
-		
-		protected void printK(BNode node) {
-			Queue<BNode> q = new LinkedList<BNode>();
-	 		int nodesRemaining = 0; 
-	 		q.add(node);
-	 		while (!q.isEmpty()) {
-	 			nodesRemaining = q.size();
-	 			while (nodesRemaining > 0) {
-					BNode n = (BNode) q.remove();
-					n.printNode();
-					if (n.getNodeType() == "InnerNode") {
-						for (int i = 0; i <= ((BInnerNode) n).getKeyCount(); ++i) {
-							if (((BInnerNode) n).getChild(i) != null)
-								q.add(((BInnerNode) n).getChild(i));
-							else
-								break;
-						}
-					}
-					--nodesRemaining;
-				}
-				System.out.println();
-	 		}
-		}
-		
-		protected void printV(BNode node) {
-			Queue<BNode> q = new LinkedList<BNode>();
-	 		int nodesRemaining = 0; 
-	 		q.add(node);
-	 		while (!q.isEmpty()) {
-	 			nodesRemaining = q.size();
-	 			while (nodesRemaining > 0) {
-					BNode n = (BNode) q.remove();
-					if (n.getNodeType() == "LeafNode")
-						((BLeafNode) n).printV(n);
-					else {
-						for (int i = 0; i <= ((BInnerNode) n).getKeyCount(); ++i) {
-							if (((BInnerNode) n).getChild(i) != null)
-								q.add(((BInnerNode) n).getChild(i));
-							else
-								break;
-						}
-					}
-					--nodesRemaining;
-				}
-	 		}
-	 		System.out.println();
-		}
 	}
 }
