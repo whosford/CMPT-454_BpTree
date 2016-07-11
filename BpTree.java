@@ -10,13 +10,13 @@ public class BpTree {
 	
 	//Constructor with order specified
 	public BpTree(int n) {
-		N = n - 1; //Set max number of keys to be n - 1
+		N = n; //Set max number of keys to be n
         root = new BLeafNode();
 	}
 	
 	//Copy constructor, order can be changed for B+ tree copy
 	public BpTree(int n, BpTree B) {
-		N = n - 1; //Set max number of keys to be n - 1
+		N = n; //Set max number of keys to be n
 		root = new BLeafNode();
 		
 		if (B.getRoot().getKeyCount() != 0)
