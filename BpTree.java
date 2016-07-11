@@ -4,22 +4,23 @@ import java.util.Queue;
 public class BpTree {
 	//Default constructor
 	public BpTree() {
-		N = 4;
+		N = 4; //Set max number of keys to be 4
         root = new BLeafNode();
 	}
 	
 	//Constructor with order specified
 	public BpTree(int n) {
-		N = n;
+		N = n - 1; //Set max number of keys to be n - 1
         root = new BLeafNode();
 	}
 	
 	//Copy constructor, order can be changed for B+ tree copy
 	public BpTree(int n, BpTree B) {
-		N = n;
+		N = n - 1; //Set max number of keys to be n - 1
 		root = new BLeafNode();
-			
-		copyTree(B.getRoot());
+		
+		if (B.root.getKeyCount() != 0)
+			copyTree(B.getRoot());
 	}
 	
 
@@ -72,7 +73,8 @@ public class BpTree {
 			nodesRemaining = q.size();
 			while (nodesRemaining > 0) {
 				BNode n = (BNode) q.remove();
-				printKeys(n);
+				if (n.getKeyCount() != 0)
+					printKeys(n);
 				if (n.getNodeType() == "InnerNode") {
 					for (int i = 0; i <= ((BInnerNode) n).getKeyCount(); ++i) {
 						if (((BInnerNode) n).getChild(i) != null)
@@ -91,27 +93,7 @@ public class BpTree {
 		if (root.getKeyCount() == 0)
 			return;
 		
-		Queue<BNode> q = new LinkedList<BNode>();
-		int nodesRemaining = 0;
-		q.add(root);
-		while (!q.isEmpty()) {
-			nodesRemaining = q.size();
-			while (nodesRemaining > 0) {
-				BNode n = (BNode) q.remove();
-				if (n.getNodeType() == "LeafNode")
-					printValues((BLeafNode) n);
-				else {
-					for (int i = 0; i <= ((BInnerNode) n).getKeyCount(); ++i) {
-						if (((BInnerNode) n).getChild(i) != null)
-							q.add(((BInnerNode) n).getChild(i));
-						else
-							break;
-					}
-				}
-				--nodesRemaining;
-			}
-		}
-		System.out.println();
+		printValues(root);
 	}
 	
 	private BNode root; //Pointer to root
@@ -131,29 +113,13 @@ public class BpTree {
 	}
 	
 	private void copyTree(BNode node) {
-		if (node.getKeyCount() == 0)
-			return;
-		
-		Queue<BNode> q = new LinkedList<BNode>();
-		int nodesRemaining = 0;
-		q.add(node);
-		while (!q.isEmpty()) {
-			nodesRemaining = q.size();
-			while (nodesRemaining > 0) {
-				BNode n = (BNode) q.remove();
-				if (n.getNodeType() == "LeafNode") {
-					for (int i = 0; i < ((BLeafNode) n).getKeyCount(); ++i)
-						insert(((BLeafNode) n).getKey(i), ((BLeafNode) n).getValue(i));
-				} else {
-					for (int i = 0; i <= ((BInnerNode) n).getKeyCount(); ++i) {
-						if (((BInnerNode) n).getChild(i) != null)
-							q.add(((BInnerNode) n).getChild(i));
-						else
-							break;
-					}
-				}
-				--nodesRemaining;
-			}
+		if (node.getNodeType() == "InnerNode")
+			copyTree(((BInnerNode) node).getChild(0));
+		else {
+			for (int i = 0; i < ((BLeafNode) node).getKeyCount(); ++i)
+				insert(((BLeafNode) node).getKey(i), ((BLeafNode) node).getValue(i));
+			if (((BLeafNode) node).getNextLeafNode() != null)
+				copyTree(((BLeafNode) node).getNextLeafNode());
 		}
 	}
 	
@@ -166,13 +132,16 @@ public class BpTree {
 	}
 	
 	private void printValues(BNode node) {
-		int i;
-		System.out.print(" [");
-		for (i = 0; i < ((BLeafNode) node).getKeyCount() - 1; i++)
-			System.out.print(((BLeafNode) node).getValue(i) + ",");
-		System.out.print(((BLeafNode) node).getValue(i) + "]");
+		if (node.getNodeType() == "InnerNode")
+			printValues(((BInnerNode) node).getChild(0));
+		else {
+			for (int i = 0; i < ((BLeafNode) node).getKeyCount(); ++i)
+				System.out.println(((BLeafNode) node).getValue(i));
+			if (((BLeafNode) node).getNextLeafNode() != null)
+				printValues(((BLeafNode) node).getNextLeafNode());
+		}
 	}
-	
+
 	abstract class BNode {
 		protected int[] keys;
 		protected int keyCount;
@@ -252,12 +221,12 @@ public class BpTree {
 		
 		//This function returns true if node has too few keys and false otherwise
 		public boolean isTooEmpty() {
-			return this.getKeyCount() < (this.keys.length / 2);
+			return this.getKeyCount() < ((this.keys.length + 1) / 2);
 		}
 		
 		//This function returns true if sibling of node with too few keys can lend a key
 		public boolean canGiveKey() {
-			return this.getKeyCount() > (this.keys.length / 2);
+			return this.getKeyCount() > ((this.keys.length + 1) / 2);
 		}
 		
 		/*
@@ -295,43 +264,45 @@ public class BpTree {
 			if (this.getParent() == null)
 				return null;
 			
-			//Check whether left sibling can give key
-			BNode leftSibling = this.getLSibling();
-			if ((leftSibling != null) && (leftSibling.canGiveKey())) {
-				this.getParent().processGiveKey(this, leftSibling, leftSibling.getKeyCount() - 1);
-				return null;
-			}
-			
 			//Check whether right sibling can give a key
 			BNode rightSibling = this.getRSibling();
 			if ((rightSibling != null) && (rightSibling.canGiveKey())) {
-				this.getParent().processGiveKey(this, rightSibling, 0);
+				this.getParent().processRedistribute(this, rightSibling, 0);
 				return null;
 			}
 			
-			//Neither siblings can give a key, need to merge nodes
-			if (leftSibling != null) {
-				return this.getParent().processMerge(leftSibling, this);
+			//Check whether left sibling can give key
+			BNode leftSibling = this.getLSibling();
+			if ((leftSibling != null) && (leftSibling.canGiveKey())) {
+				this.getParent().processRedistribute(this, leftSibling, leftSibling.getKeyCount() - 1);
+				return null;
+			}
+			
+			//Neither siblings can give a key, need to coalesce nodes
+			if (rightSibling != null) {
+				return this.getParent().processCoalesce(this, rightSibling);
 			}
 			else {
-				return this.getParent().processMerge(this, rightSibling);
+				return this.getParent().processCoalesce(leftSibling, this);
 			}
 		}
 		
-		protected abstract void processGiveKey(BNode TakerNode, BNode GiverNode, int Index);
-		protected abstract BNode processMerge(BNode lChild, BNode rChild);
-		protected abstract void Merge(int sinkKey, BNode rightSibling);
-		protected abstract int giveKey(int sinkKey, BNode sibling, int borrowIndex);
+		protected abstract void processRedistribute(BNode TakerNode, BNode GiverNode, int Index);
+		protected abstract BNode processCoalesce(BNode lChild, BNode rChild);
+		protected abstract void coalesce(int sinkKey, BNode rightSibling);
+		protected abstract int redistribute(int sinkKey, BNode sibling, int borrowIndex);
 		//End deletion helper functions
 	}
 	
 	class BLeafNode extends BNode {
 		private String[] values;
+		private BLeafNode nextLeafNode;
 		
 		protected BLeafNode() {
 			this.keys = new int[N];
 			this.values = new String[N];
 			this.nodeType = "LeafNode";
+			this.setNextLeafNode(null);
 		}
 		
 		public String getValue(int index) {
@@ -346,6 +317,14 @@ public class BpTree {
 			return this.nodeType;
 		}
 		
+		public BLeafNode getNextLeafNode() {
+			return this.nextLeafNode;
+		}
+
+		public void setNextLeafNode(BLeafNode node) {
+			this.nextLeafNode = node;
+		}
+
 		/*
 		 * Function returns index of key if found in leaf node
 		 * Returns -1 if not found in leaf node
@@ -387,10 +366,10 @@ public class BpTree {
 		
 		//Split operation for leaf node
 		protected BNode split() {
-			int middleIndex = (this.getKeyCount() + 1) / 2; //Get mid-point in node to be split
+			int middleIndex = (this.keys.length + 1) / 2; //Get mid-point in node to be split
 			
 			BLeafNode newNode = new BLeafNode(); //Create new node to put half of the keys from full node
-			for (int i = 0; i < this.getKeyCount() - middleIndex; ++i) {
+			for (int i = 0; i < this.keys.length - middleIndex; ++i) {
 				newNode.setKey(i, this.getKey(i + middleIndex));
 				newNode.setValue(i, this.getValue(i + middleIndex));
 				this.setKey(i + middleIndex, 0);
@@ -398,6 +377,8 @@ public class BpTree {
 			}
 			newNode.keyCount = this.getKeyCount() - middleIndex;
 			this.keyCount = middleIndex;
+			newNode.setNextLeafNode(this.getNextLeafNode());
+			this.setNextLeafNode(newNode);
 			
 			return newNode;
 		}
@@ -436,23 +417,23 @@ public class BpTree {
 		}
 		
 		/*
-		 * processGiveKey function not supported for leaf node, defined for inner node 
+		 * processRedistribute function not supported for leaf node, defined for inner node 
 		*/
-		protected void processGiveKey(BNode takerNode, BNode giverNode, int Index) {
+		protected void processRedistribute(BNode takerNode, BNode giverNode, int Index) {
 			throw new UnsupportedOperationException();
 		}
 		
 		/*
-		 * processMerge function not supported for leaf node, defined for inner node 
+		 * processCoalesce function not supported for leaf node, defined for inner node 
 		*/
-		protected BNode processMerge(BNode leftChild, BNode rightChild) {
+		protected BNode processCoalesce(BNode leftChild, BNode rightChild) {
 			throw new UnsupportedOperationException();
 		}
 		
 		/*
-		 * This function merges two leaf nodes together when one of them has too few nodes
-		 */
-		protected void Merge(int keyDown, BNode rightSibling) {
+		 * This function coalesces two leaf nodes together when one of them has too few nodes
+		*/
+		protected void coalesce(int keyDown, BNode rightSibling) {
 			BLeafNode siblingLeaf = (BLeafNode) rightSibling;
 			
 			int j = this.getKeyCount();
@@ -463,6 +444,7 @@ public class BpTree {
 			this.keyCount += siblingLeaf.getKeyCount();
 			
 			this.setRSibling(siblingLeaf.rSibling);
+			this.setNextLeafNode((BLeafNode) siblingLeaf.rSibling); 
 			if (siblingLeaf.rSibling != null)
 				siblingLeaf.rSibling.setLSibling(this);
 		}
@@ -470,11 +452,11 @@ public class BpTree {
 		/*
 		 * This function takes a key from a sibling and gives it too the node that has too few keys 
 		*/
-		protected int giveKey(int keyDown, BNode sibling, int Index) {
+		protected int redistribute(int keyDown, BNode sibling, int Index) {
 			BLeafNode siblingNode = (BLeafNode) sibling;
 			
 			this.insert(siblingNode.getKey(Index), siblingNode.getValue(Index)); //Insert key from sibling into node that has too few keys
-			siblingNode.deleteAt(Index); //Delete key from not that gave it to node that had too few keys
+			siblingNode.deleteAt(Index); //Delete key from node that gave it to node that had too few keys
 			
 			return Index == 0 ? sibling.getKey(0) : this.getKey(0);
 		}
@@ -539,37 +521,45 @@ public class BpTree {
 		 * In this case the middle key is kicked out and pushed up to the parent
 		*/
 		protected BNode split() {
-			int middleIndex = this.getKeyCount() / 2;
+			int middleIndex = (this.keys.length + 1) / 2;
 			
 			BInnerNode newNode = new BInnerNode();
-			for (int i = middleIndex + 1; i < this.getKeyCount(); ++i) {
-				newNode.setKey(i - middleIndex - 1, this.getKey(i));
-				this.setKey(i, 0);
+			for (int i = 0; i < this.keys.length - middleIndex; ++i) {
+				newNode.setKey(i, this.getKey(i + middleIndex));
+				this.setKey(i + middleIndex, 0);
 			}
-			for (int i = middleIndex + 1; i <= this.getKeyCount(); ++i) {
-				newNode.setChild(i - middleIndex - 1, this.getChild(i));
-				newNode.getChild(i - middleIndex - 1).setParent(newNode);
-				this.setChild(i, null);
+			for (int i = 0; i <= this.keys.length - middleIndex; ++i) {
+				newNode.setChild(i, this.getChild(i + middleIndex));
+				newNode.getChild(i).setParent(newNode);
+				this.setChild(i + middleIndex, null);
 			}
 			this.setKey(middleIndex, 0);
-			newNode.keyCount = this.getKeyCount() - middleIndex - 1;
+			newNode.keyCount = this.getKeyCount() - middleIndex;
 			this.keyCount = middleIndex;
 			
 			return newNode;
 		}
 		
-		protected BNode pushKeyUp(int key, BNode leftChild, BNode rightNode) {
+		protected BNode pushKeyUp(int key, BNode leftChild, BNode rightChild) {
 			// Find position where new key should be inserted
 			int index = this.find(key);
-			
-			// Insert the new key at position "index"
-			this.insertAt(index, key, leftChild, rightNode);
 
 			// Check whether the node now needs to be split
 			if (this.isFull()) {
-				return this.fixFullNode();
+				BInnerNode node = (BInnerNode) this.fixFullNode();
+				if (key > this.getKey(this.getKeyCount() - 1)) {
+					index = this.getRSibling().find(key);
+					BInnerNode rightSibling = (BInnerNode) this.getRSibling();
+					rightSibling.insertAt(index, key, leftChild, rightChild);
+				}
+				else {
+					index = this.find(key);
+					this.insertAt(index, key, leftChild, rightChild);
+				}
+				return node;
 			}
 			else {
+				this.insertAt(index, key, leftChild, rightChild);
 				return this.getParent() == null ? this : null;
 			}
 		}
@@ -592,36 +582,36 @@ public class BpTree {
 		}
 		
 		
-		protected void processGiveKey(BNode takerNode, BNode giverNode, int Index) {
+		protected void processRedistribute(BNode takerNode, BNode giverNode, int Index) {
 			int takerChildIndex = 0;
 			while ((takerChildIndex < this.getKeyCount() + 1) && (this.getChild(takerChildIndex) != takerNode))
 				++takerChildIndex;
 			
 			if (Index == 0) {
 				// Take key from right sibling
-				int KeyUp = takerNode.giveKey(this.getKey(takerChildIndex), giverNode, Index);
+				int KeyUp = takerNode.redistribute(this.getKey(takerChildIndex), giverNode, Index);
 				this.setKey(takerChildIndex, KeyUp);
 			}
 			else {
-				// borrow a key from left sibling
-				int KeyUp = takerNode.giveKey(this.getKey(takerChildIndex - 1), giverNode, Index);
+				// Take key from left sibling
+				int KeyUp = takerNode.redistribute(this.getKey(takerChildIndex - 1), giverNode, Index);
 				this.setKey(takerChildIndex - 1, KeyUp);
 			}
 		}
 		
-		protected BNode processMerge(BNode leftChild, BNode rightChild) {
+		protected BNode processCoalesce(BNode leftChild, BNode rightChild) {
 			int index = 0;
 			while (index < this.getKeyCount() && this.getChild(index) != leftChild)
 				++index;
 			int KeyDown = this.getKey(index);
 			
-			// Merge two children and the key that has to move down
-			leftChild.Merge(KeyDown, rightChild);
+			// Coalesce two children and the key that has to move down
+			leftChild.coalesce(KeyDown, rightChild);
 			
 			// Remove the key that moves down, keep the left child and abandon the right child
 			this.deleteAt(index);
 			
-			// Check whether the need to take a key or merge nodes needs to propagate further up the tree
+			// Check whether the need to take a key or coalesce nodes needs to propagate further up the tree
 			if (this.isTooEmpty()) {
 				if (this.getParent() == null) {
 					// Current node is root, here we either remove keys or if none are left delete the entire root node
@@ -640,26 +630,24 @@ public class BpTree {
 			return null;
 		}
 		
-		protected void Merge(int KeyDown, BNode rightSibling) {
+		protected void coalesce(int KeyDown, BNode rightSibling) {
 			BInnerNode rightSiblingNode = (BInnerNode) rightSibling;
 			
 			int j = this.getKeyCount();
-			this.setKey(j++, KeyDown);
-			
 			for (int i = 0; i < rightSiblingNode.getKeyCount(); ++i) {
 				this.setKey(j + i, rightSiblingNode.getKey(i));
 			}
 			for (int i = 0; i < rightSiblingNode.getKeyCount() + 1; ++i) {
 				this.setChild(j + i, rightSiblingNode.getChild(i));
 			}
-			this.keyCount += 1 + rightSiblingNode.getKeyCount();
+			this.keyCount += rightSiblingNode.getKeyCount();
 			
 			this.setRSibling(rightSiblingNode.rSibling);
 			if (rightSiblingNode.rSibling != null)
 				rightSiblingNode.rSibling.setLSibling(this);
 		}
 
-		protected int giveKey(int DownKey, BNode sibling, int Index) {
+		protected int redistribute(int DownKey, BNode sibling, int Index) {
 			BInnerNode siblingNode = (BInnerNode) sibling;
 			
 			int KeyUp = 0;
@@ -668,7 +656,7 @@ public class BpTree {
 				int index = this.getKeyCount();
 				this.setKey(index, DownKey);
 				this.setChild(index + 1, siblingNode.getChild(Index));			
-				this.keyCount += 1;
+				++this.keyCount;
 				
 				KeyUp = siblingNode.getKey(0);
 				siblingNode.deleteAt(Index);
